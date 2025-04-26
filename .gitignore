@@ -33,5 +33,5 @@ build/
 .vscode/
 
 # Secrets
-src/main/resources/firebase-service-account.json
+firebase-service-account.json
 src/main/resources/application.properties
