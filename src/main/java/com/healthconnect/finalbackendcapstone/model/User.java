@@ -1,22 +1,22 @@
 package com.healthconnect.finalbackendcapstone.model;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.Data;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDateTime;
+
+@Data
 @Entity
-@Table(name = "users") // Ensure this matches your actual table name in MySQL
-@Getter
-@Setter
-@NoArgsConstructor
+@Table(name = "users")
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "email", nullable = false, unique = true)
+    @Column(nullable = false, unique = true)
     private String email;
 
     @Column(name = "phone_number", nullable = false, unique = true)
@@ -25,22 +25,29 @@ public class User {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
-    @Enumerated(EnumType.STRING) // Store the Enum as a string
-    @Column(name = "role", nullable = false)
-    private Role role;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role = Role.PATIENT;
 
-    @Column(name = "is_email_verified")
-    private boolean isEmailVerified;
+    @Column(name = "is_email_verified", columnDefinition = "TINYINT(1) DEFAULT 0")
+    private boolean isEmailVerified = false;
 
-    @Column(name = "is_phone_verified")
-    private boolean isPhoneVerified;
+    @Column(name = "is_phone_verified", columnDefinition = "TINYINT(1) DEFAULT 0")
+    private boolean isPhoneVerified = false;
 
-    // Enum for role
+    @Column(name = "is_active", columnDefinition = "TINYINT(1) DEFAULT 1")
+    private boolean isActive = true;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
     public enum Role {
-        patient,
-        doctor,
-        admin
+        PATIENT, DOCTOR, ADMIN
     }
 }
-
 
