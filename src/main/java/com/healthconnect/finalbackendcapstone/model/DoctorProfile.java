@@ -1,26 +1,31 @@
 package com.healthconnect.finalbackendcapstone.model;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.Data;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+@Data
 @Entity
-@Table(name = "doctor_profiles")
-@Getter
-@Setter
-@NoArgsConstructor
+@Table(name = "doctor_profiles", indexes = {
+    @Index(name = "idx_doctor_prc", columnList = "prc_number", unique = true),
+    @Index(name = "idx_doctor_name", columnList = "last_name, first_name"),
+    @Index(name = "idx_doctor_verified", columnList = "is_verified"),
+    @Index(name = "idx_doctor_practicing_since", columnList = "practicing_since"),
+    @Index(name = "idx_doctor_email", columnList = "email"),
+    @Index(name = "idx_doctor_phone", columnList = "phone_number")
+})
 public class DoctorProfile {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne
-    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_doctor_profiles_user_id"))
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @Column(name = "first_name", nullable = false)
@@ -41,10 +46,6 @@ public class DoctorProfile {
     @Enumerated(EnumType.STRING)
     @Column(name = "gender")
     private Gender gender;
-
-    public enum Gender {
-        male, female, other
-    }
 
     @Column(name = "title")
     private String title;
@@ -76,17 +77,52 @@ public class DoctorProfile {
     @Column(name = "profile_picture_url")
     private String profilePictureUrl;
 
-    @Column(name = "is_verified")
-    private boolean isVerified;
+    @Column(name = "is_verified", columnDefinition = "TINYINT(1) DEFAULT 0")
+    private boolean isVerified = false;
 
+    @CreationTimestamp
     @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt;
 
+    @UpdateTimestamp
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt = LocalDateTime.now();
+    private LocalDateTime updatedAt;
 
-    @PreUpdate
-    public void setLastUpdate() {
-        this.updatedAt = LocalDateTime.now();
+    public enum Gender {
+        MALE, FEMALE, OTHER;
+
+        @Override
+        public String toString() {
+            return name().toLowerCase();
+        }
+
+        public static Gender fromString(String value) {
+            if (value == null) {
+                return null;
+            }
+            try {
+                return valueOf(value.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return null;
+            }
+        }
     }
-}
+
+    // Helper method to get full name
+    public String getFullName() {
+        StringBuilder fullName = new StringBuilder();
+        fullName.append(firstName);
+        
+        if (middleName != null && !middleName.isEmpty()) {
+            fullName.append(" ").append(middleName);
+        }
+        
+        fullName.append(" ").append(lastName);
+        
+        if (suffix != null && !suffix.isEmpty()) {
+            fullName.append(", ").append(suffix);
+        }
+        
+        return fullName.toString();
+    }
+} 

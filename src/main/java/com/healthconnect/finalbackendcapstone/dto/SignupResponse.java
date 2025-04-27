@@ -12,5 +12,7 @@ public class SignupResponse {
     private String role;
     private boolean isEmailVerified;
     private boolean isPhoneVerified;
+    private boolean isActive;
     private String message;
-}
+    // No password information returned for security
+} 

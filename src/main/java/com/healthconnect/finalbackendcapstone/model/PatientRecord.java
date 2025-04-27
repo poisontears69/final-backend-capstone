@@ -7,9 +7,9 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
+@Data
 @Entity
 @Table(name = "patient_records")
-@Data
 public class PatientRecord {
 
     @Id
@@ -17,11 +17,11 @@ public class PatientRecord {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "patient_id", nullable = false, foreignKey = @ForeignKey(name = "fk_patient_records_patient_id"))
+    @JoinColumn(name = "patient_id", nullable = false)
     private Patient patient;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "doctor_id", nullable = false, foreignKey = @ForeignKey(name = "fk_patient_records_doctor_id"))
+    @JoinColumn(name = "doctor_id", nullable = false)
     private DoctorProfile doctor;
 
     @CreationTimestamp
@@ -31,4 +31,4 @@ public class PatientRecord {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-}
+} 

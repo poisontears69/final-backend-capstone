@@ -2,12 +2,13 @@ package com.healthconnect.finalbackendcapstone.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 
+@Data
 @Entity
 @Table(name = "clinic_schedules")
-@Data
 public class ClinicSchedule {
 
     @Id
@@ -16,7 +17,7 @@ public class ClinicSchedule {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "clinic_id", nullable = false)
-    private Clinic clinic;  // Changed from clinicId to Clinic object
+    private Clinic clinic;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "day_of_week", nullable = false)
@@ -28,6 +29,6 @@ public class ClinicSchedule {
     @Column(name = "close_time", nullable = false)
     private LocalTime closeTime;
 
-    @Column(name = "is_active")
+    @Column(name = "is_active", columnDefinition = "tinyint(1) default 1")
     private Boolean isActive = true;
-}
+} 

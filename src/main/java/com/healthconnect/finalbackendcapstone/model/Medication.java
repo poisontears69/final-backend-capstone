@@ -1,7 +1,10 @@
 package com.healthconnect.finalbackendcapstone.model;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDate;
@@ -10,33 +13,31 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "medications")
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Medication {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "patient_record_id", nullable = false,
-            foreignKey = @ForeignKey(name = "fk_medications_patient_record_id"))
+    @JoinColumn(name = "patient_record_id", nullable = false)
     private PatientRecord patientRecord;
 
-    @Column(name = "medication_name", nullable = false)
+    @Column(nullable = false)
     private String medicationName;
-
-    @Column(name = "dosage")
+    
     private String dosage;
-
-    @Column(name = "start_date")
+    
+    @Column(nullable = false)
     private LocalDate startDate;
-
-    @Column(name = "end_date")
+    
     private LocalDate endDate;
-
-    @Column(name = "remarks", columnDefinition = "TEXT")
+    
+    @Column(length = 1000)
     private String remarks;
-
+    
     @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
-}
+} 

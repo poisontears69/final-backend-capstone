@@ -1,162 +1,53 @@
 package com.healthconnect.finalbackendcapstone.dto;
 
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
+
 import java.math.BigDecimal;
 
+@Data
 public class ClinicRequest {
-
+    
+    @NotNull(message = "Doctor ID is required")
     private Long doctorId;
+    
+    @NotBlank(message = "Clinic name is required")
     private String clinicName;
+    
+    @NotBlank(message = "Address line 1 is required")
     private String addressLine1;
+    
     private String addressLine2;
+    
     private String city;
+    
     private String province;
+    
     private String region;
+    
     private String zipCode;
+    
     private String landmark;
+    
     private String description;
+    
+    @Email(message = "Invalid email format")
     private String email;
+    
     private String landlineNumber;
+    
     private String phoneNumber;
+    
     private String contactPersonName;
+    
+    @Email(message = "Invalid contact person email format")
     private String contactPersonEmail;
+    
     private String contactPersonPhone;
+    
+    @DecimalMin(value = "0.0", inclusive = true, message = "Consultation fee must be non-negative")
     private BigDecimal consultationFee;
-
-    // Getters and Setters
-
-    public Long getDoctorId() {
-        return doctorId;
-    }
-
-    public void setDoctorId(Long doctorId) {
-        this.doctorId = doctorId;
-    }
-
-    public String getClinicName() {
-        return clinicName;
-    }
-
-    public void setClinicName(String clinicName) {
-        this.clinicName = clinicName;
-    }
-
-    public String getAddressLine1() {
-        return addressLine1;
-    }
-
-    public void setAddressLine1(String addressLine1) {
-        this.addressLine1 = addressLine1;
-    }
-
-    public String getAddressLine2() {
-        return addressLine2;
-    }
-
-    public void setAddressLine2(String addressLine2) {
-        this.addressLine2 = addressLine2;
-    }
-
-    public String getCity() {
-        return city;
-    }
-
-    public void setCity(String city) {
-        this.city = city;
-    }
-
-    public String getProvince() {
-        return province;
-    }
-
-    public void setProvince(String province) {
-        this.province = province;
-    }
-
-    public String getRegion() {
-        return region;
-    }
-
-    public void setRegion(String region) {
-        this.region = region;
-    }
-
-    public String getZipCode() {
-        return zipCode;
-    }
-
-    public void setZipCode(String zipCode) {
-        this.zipCode = zipCode;
-    }
-
-    public String getLandmark() {
-        return landmark;
-    }
-
-    public void setLandmark(String landmark) {
-        this.landmark = landmark;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getLandlineNumber() {
-        return landlineNumber;
-    }
-
-    public void setLandlineNumber(String landlineNumber) {
-        this.landlineNumber = landlineNumber;
-    }
-
-    public String getPhoneNumber() {
-        return phoneNumber;
-    }
-
-    public void setPhoneNumber(String phoneNumber) {
-        this.phoneNumber = phoneNumber;
-    }
-
-    public String getContactPersonName() {
-        return contactPersonName;
-    }
-
-    public void setContactPersonName(String contactPersonName) {
-        this.contactPersonName = contactPersonName;
-    }
-
-    public String getContactPersonEmail() {
-        return contactPersonEmail;
-    }
-
-    public void setContactPersonEmail(String contactPersonEmail) {
-        this.contactPersonEmail = contactPersonEmail;
-    }
-
-    public String getContactPersonPhone() {
-        return contactPersonPhone;
-    }
-
-    public void setContactPersonPhone(String contactPersonPhone) {
-        this.contactPersonPhone = contactPersonPhone;
-    }
-
-    public BigDecimal getConsultationFee() {
-        return consultationFee;
-    }
-
-    public void setConsultationFee(BigDecimal consultationFee) {
-        this.consultationFee = consultationFee;
-    }
-}
+} 

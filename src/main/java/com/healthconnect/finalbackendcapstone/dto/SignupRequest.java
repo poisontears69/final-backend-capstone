@@ -1,5 +1,6 @@
 package com.healthconnect.finalbackendcapstone.dto;
 
+import com.healthconnect.finalbackendcapstone.model.User;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -22,4 +23,4 @@ public class SignupRequest {
     private String password;
 
     private String role = "PATIENT"; // Default role
-}
+} 

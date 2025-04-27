@@ -9,7 +9,12 @@ import java.time.LocalDateTime;
 
 @Data
 @Entity
-@Table(name = "users")
+@Table(name = "users", indexes = {
+    @Index(name = "idx_users_email", columnList = "email", unique = true),
+    @Index(name = "idx_users_phone", columnList = "phone_number", unique = true),
+    @Index(name = "idx_users_role", columnList = "role"),
+    @Index(name = "idx_users_active", columnList = "is_active")
+})
 public class User {
 
     @Id
@@ -24,6 +29,12 @@ public class User {
 
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
+
+    @Column(name = "first_name")
+    private String firstName;
+
+    @Column(name = "last_name")
+    private String lastName;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -49,5 +60,27 @@ public class User {
     public enum Role {
         PATIENT, DOCTOR, ADMIN
     }
-}
 
+    // Helper method to get full name
+    public String getFullName() {
+        StringBuilder fullName = new StringBuilder();
+        
+        if (firstName != null && !firstName.isEmpty()) {
+            fullName.append(firstName);
+        }
+        
+        if (lastName != null && !lastName.isEmpty()) {
+            if (fullName.length() > 0) {
+                fullName.append(" ");
+            }
+            fullName.append(lastName);
+        }
+        
+        // If no name is available, return email as identifier
+        if (fullName.length() == 0 && email != null) {
+            return email;
+        }
+        
+        return fullName.toString();
+    }
+} 
