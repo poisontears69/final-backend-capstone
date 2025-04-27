@@ -1,6 +1,7 @@
 package com.healthconnect.finalbackendcapstone.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.healthconnect.finalbackendcapstone.model.Clinic.ConsultationMode;
 import lombok.Builder;
 import lombok.Data;
 
@@ -13,6 +14,7 @@ public class ClinicResponse {
     private Long id;
     private Long doctorId;
     private String doctorName;
+    private ConsultationMode consultationMode;
     private String clinicName;
     private String addressLine1;
     private String addressLine2;

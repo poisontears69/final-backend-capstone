@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,6 +28,20 @@ public class ClinicService {
         // Get doctor entity
         DoctorProfile doctor = doctorProfileRepository.findById(request.getDoctorId())
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor not found with id: " + request.getDoctorId()));
+
+        // For online clinics, check if doctor already has one
+        if (request.getConsultationMode() == Clinic.ConsultationMode.ONLINE) {
+            Optional<Clinic> existingOnlineClinic = clinicRepository.findByDoctorIdAndConsultationMode(
+                request.getDoctorId(), Clinic.ConsultationMode.ONLINE);
+            if (existingOnlineClinic.isPresent()) {
+                throw new IllegalStateException("Doctor already has an online consultation clinic");
+            }
+
+            // For online clinics, set a default name if not provided
+            if (request.getClinicName() == null || request.getClinicName().trim().isEmpty()) {
+                request.setClinicName(doctor.getUser().getFullName() + "'s Online Consultation");
+            }
+        }
 
         // Create new clinic
         Clinic clinic = new Clinic();
@@ -76,7 +91,9 @@ public class ClinicService {
 
     @Transactional(readOnly = true)
     public Page<ClinicResponse> getClinicsByCity(String city, Pageable pageable) {
-        Page<Clinic> clinics = clinicRepository.findByCity(city, pageable);
+        // Only search physical clinics
+        Page<Clinic> clinics = clinicRepository.findByCityAndConsultationMode(
+            city, Clinic.ConsultationMode.IN_CLINIC, pageable);
         return clinics.map(this::mapToResponse);
     }
 
@@ -97,6 +114,16 @@ public class ClinicService {
                     .orElseThrow(() -> new ResourceNotFoundException("Doctor not found with id: " + request.getDoctorId()));
             clinic.setDoctor(doctor);
         }
+
+        // If changing to online mode, check if doctor already has an online clinic
+        if (request.getConsultationMode() == Clinic.ConsultationMode.ONLINE && 
+            clinic.getConsultationMode() != Clinic.ConsultationMode.ONLINE) {
+            Optional<Clinic> existingOnlineClinic = clinicRepository.findByDoctorIdAndConsultationMode(
+                request.getDoctorId(), Clinic.ConsultationMode.ONLINE);
+            if (existingOnlineClinic.isPresent()) {
+                throw new IllegalStateException("Doctor already has an online consultation clinic");
+            }
+        }
         
         updateClinicFromRequest(clinic, request);
         Clinic updatedClinic = clinicRepository.save(clinic);
@@ -112,17 +139,24 @@ public class ClinicService {
     }
     
     private void updateClinicFromRequest(Clinic clinic, ClinicRequest request) {
+        clinic.setConsultationMode(request.getConsultationMode());
         clinic.setClinicName(request.getClinicName());
-        clinic.setAddressLine1(request.getAddressLine1());
-        clinic.setAddressLine2(request.getAddressLine2());
-        clinic.setCity(request.getCity());
-        clinic.setProvince(request.getProvince());
-        clinic.setRegion(request.getRegion());
-        clinic.setZipCode(request.getZipCode());
-        clinic.setLandmark(request.getLandmark());
+
+        // Only set physical clinic details for IN_CLINIC mode
+        if (request.getConsultationMode() == Clinic.ConsultationMode.IN_CLINIC) {
+            clinic.setAddressLine1(request.getAddressLine1());
+            clinic.setAddressLine2(request.getAddressLine2());
+            clinic.setCity(request.getCity());
+            clinic.setProvince(request.getProvince());
+            clinic.setRegion(request.getRegion());
+            clinic.setZipCode(request.getZipCode());
+            clinic.setLandmark(request.getLandmark());
+            clinic.setLandlineNumber(request.getLandlineNumber());
+        }
+
+        // Common fields for both modes
         clinic.setDescription(request.getDescription());
         clinic.setEmail(request.getEmail());
-        clinic.setLandlineNumber(request.getLandlineNumber());
         clinic.setPhoneNumber(request.getPhoneNumber());
         clinic.setContactPersonName(request.getContactPersonName());
         clinic.setContactPersonEmail(request.getContactPersonEmail());
@@ -135,6 +169,7 @@ public class ClinicService {
                 .id(clinic.getId())
                 .doctorId(clinic.getDoctor().getId())
                 .doctorName(clinic.getDoctor().getUser().getFullName())
+                .consultationMode(clinic.getConsultationMode())
                 .clinicName(clinic.getClinicName())
                 .addressLine1(clinic.getAddressLine1())
                 .addressLine2(clinic.getAddressLine2())

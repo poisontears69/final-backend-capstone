@@ -51,6 +51,24 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public BookingDTO createBooking(BookingDTO bookingDTO) {
+        // Validate clinic exists and check consultation mode
+        if (bookingDTO.getClinicId() != null) {
+            Clinic clinic = clinicRepository.findById(bookingDTO.getClinicId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Clinic not found with id: " + bookingDTO.getClinicId()));
+            
+            // Validate consultation mode
+            if (bookingDTO.getAppointmentType() == AppointmentType.in_clinic && 
+                clinic.getConsultationMode() == Clinic.ConsultationMode.ONLINE) {
+                throw new IllegalStateException("This clinic only accepts online consultations");
+            }
+            if (bookingDTO.getAppointmentType() == AppointmentType.online && 
+                clinic.getConsultationMode() == Clinic.ConsultationMode.IN_CLINIC) {
+                throw new IllegalStateException("This clinic only accepts in-clinic consultations");
+            }
+        } else if (bookingDTO.getAppointmentType() == AppointmentType.in_clinic) {
+            throw new IllegalStateException("Clinic ID is required for in-clinic appointments");
+        }
+
         Booking booking = mapToEntity(bookingDTO);
         Booking savedBooking = bookingRepository.save(booking);
         return mapToDTO(savedBooking);
@@ -266,7 +284,32 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     public BookingDTO updateBooking(Long id, BookingDTO bookingDTO) {
         Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", id));
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id: " + id));
+        
+        // Validate clinic and consultation mode if changing
+        if (bookingDTO.getClinicId() != null || bookingDTO.getAppointmentType() != null) {
+            Clinic clinic = bookingDTO.getClinicId() != null ? 
+                    clinicRepository.findById(bookingDTO.getClinicId())
+                            .orElseThrow(() -> new ResourceNotFoundException("Clinic not found with id: " + bookingDTO.getClinicId())) :
+                    booking.getClinic();
+            
+            AppointmentType appointmentType = bookingDTO.getAppointmentType() != null ?
+                    bookingDTO.getAppointmentType() : booking.getAppointmentType();
+            
+            if (clinic != null) {
+                // Validate consultation mode
+                if (appointmentType == AppointmentType.in_clinic && 
+                    clinic.getConsultationMode() == Clinic.ConsultationMode.ONLINE) {
+                    throw new IllegalStateException("This clinic only accepts online consultations");
+                }
+                if (appointmentType == AppointmentType.online && 
+                    clinic.getConsultationMode() == Clinic.ConsultationMode.IN_CLINIC) {
+                    throw new IllegalStateException("This clinic only accepts in-clinic consultations");
+                }
+            } else if (appointmentType == AppointmentType.in_clinic) {
+                throw new IllegalStateException("Clinic ID is required for in-clinic appointments");
+            }
+        }
         
         // Update fields only if provided (to prevent nullifying existing data)
         if (bookingDTO.getAppointmentType() != null) {
@@ -296,25 +339,25 @@ public class BookingServiceImpl implements BookingService {
         // Update relationships if IDs provided
         if (bookingDTO.getUserId() != null) {
             User user = userRepository.findById(bookingDTO.getUserId())
-                    .orElseThrow(() -> new ResourceNotFoundException("User", "id", bookingDTO.getUserId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + bookingDTO.getUserId()));
             booking.setUser(user);
         }
         
         if (bookingDTO.getPatientId() != null) {
             Patient patient = patientRepository.findById(bookingDTO.getPatientId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Patient", "id", bookingDTO.getPatientId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Patient not found with id: " + bookingDTO.getPatientId()));
             booking.setPatient(patient);
         }
         
         if (bookingDTO.getDoctorId() != null) {
             DoctorProfile doctor = doctorProfileRepository.findById(bookingDTO.getDoctorId())
-                    .orElseThrow(() -> new ResourceNotFoundException("DoctorProfile", "id", bookingDTO.getDoctorId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Doctor not found with id: " + bookingDTO.getDoctorId()));
             booking.setDoctor(doctor);
         }
         
         if (bookingDTO.getClinicId() != null) {
             Clinic clinic = clinicRepository.findById(bookingDTO.getClinicId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Clinic", "id", bookingDTO.getClinicId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Clinic not found with id: " + bookingDTO.getClinicId()));
             booking.setClinic(clinic);
         } else if (bookingDTO.getClinicId() == null && bookingDTO.getAppointmentType() == AppointmentType.online) {
             // If appointment type is online and clinic ID is null, set clinic to null

@@ -1,5 +1,6 @@
 package com.healthconnect.finalbackendcapstone.dto;
 
+import com.healthconnect.finalbackendcapstone.model.Clinic.ConsultationMode;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -13,6 +14,9 @@ public class ClinicRequest {
     
     @NotNull(message = "Doctor ID is required")
     private Long doctorId;
+    
+    @NotNull(message = "Consultation mode is required")
+    private ConsultationMode consultationMode = ConsultationMode.IN_CLINIC;
     
     @NotBlank(message = "Clinic name is required")
     private String clinicName;

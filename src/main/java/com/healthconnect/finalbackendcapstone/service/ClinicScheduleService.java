@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -28,20 +29,16 @@ public class ClinicScheduleService {
         Clinic clinic = clinicRepository.findById(request.getClinicId())
                 .orElseThrow(() -> new ResourceNotFoundException("Clinic not found with id: " + request.getClinicId()));
         
-        // Check if schedule for this day already exists
-        Optional<ClinicSchedule> existingSchedule = clinicScheduleRepository
-                .findByClinicIdAndDayOfWeek(request.getClinicId(), request.getDayOfWeek());
-        
-        if (existingSchedule.isPresent()) {
-            throw new IllegalStateException(
-                    "Schedule already exists for clinic id: " + request.getClinicId() + 
-                    " on " + request.getDayOfWeek());
-        }
-        
         // Validate time range
-        if (request.getOpenTime().isAfter(request.getCloseTime())) {
-            throw new IllegalArgumentException("Open time must be before close time");
-        }
+        validateTimeRange(request.getOpenTime(), request.getCloseTime());
+        
+        // Check for overlapping schedules in the same clinic
+        validateNoOverlappingSchedulesInClinic(request.getClinicId(), request.getDayOfWeek(), 
+                request.getOpenTime(), request.getCloseTime(), null);
+        
+        // Check for overlapping schedules with other clinics of the same doctor
+        validateNoOverlappingSchedulesWithOtherClinics(clinic.getDoctor().getId(), request.getClinicId(), 
+                request.getDayOfWeek(), request.getOpenTime(), request.getCloseTime());
         
         // Create new schedule
         ClinicSchedule schedule = new ClinicSchedule();
@@ -104,22 +101,16 @@ public class ClinicScheduleService {
             schedule.setClinic(clinic);
         }
         
-        // If day of week is changing, check for conflicts
-        if (schedule.getDayOfWeek() != request.getDayOfWeek()) {
-            Optional<ClinicSchedule> existingSchedule = clinicScheduleRepository
-                    .findByClinicIdAndDayOfWeek(request.getClinicId(), request.getDayOfWeek());
-            
-            if (existingSchedule.isPresent() && !existingSchedule.get().getId().equals(id)) {
-                throw new IllegalStateException(
-                        "Schedule already exists for clinic id: " + request.getClinicId() + 
-                        " on " + request.getDayOfWeek());
-            }
-        }
-        
         // Validate time range
-        if (request.getOpenTime().isAfter(request.getCloseTime())) {
-            throw new IllegalArgumentException("Open time must be before close time");
-        }
+        validateTimeRange(request.getOpenTime(), request.getCloseTime());
+        
+        // Check for overlapping schedules in the same clinic
+        validateNoOverlappingSchedulesInClinic(request.getClinicId(), request.getDayOfWeek(), 
+                request.getOpenTime(), request.getCloseTime(), id);
+        
+        // Check for overlapping schedules with other clinics of the same doctor
+        validateNoOverlappingSchedulesWithOtherClinics(schedule.getClinic().getDoctor().getId(), 
+                request.getClinicId(), request.getDayOfWeek(), request.getOpenTime(), request.getCloseTime());
         
         // Update schedule
         schedule.setDayOfWeek(request.getDayOfWeek());
@@ -156,6 +147,88 @@ public class ClinicScheduleService {
         clinicScheduleRepository.deleteByClinicId(clinicId);
     }
     
+    private void validateTimeRange(LocalTime openTime, LocalTime closeTime) {
+        if (openTime.isAfter(closeTime)) {
+            throw new IllegalArgumentException("Open time must be before close time");
+        }
+        
+        // Removed business hours restriction to allow 24/7 operation
+    }
+    
+    private void validateNoOverlappingSchedulesInClinic(Long clinicId, DayOfWeek dayOfWeek, 
+            LocalTime openTime, LocalTime closeTime, Long excludeScheduleId) {
+        // Get clinic to check consultation mode
+        Clinic clinic = clinicRepository.findById(clinicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Clinic not found with id: " + clinicId));
+
+        // For online clinics, we don't need to check for overlaps as they can handle parallel appointments
+        if (clinic.getConsultationMode() == Clinic.ConsultationMode.ONLINE) {
+            return;
+        }
+
+        // Get all schedules for this clinic on the same day
+        List<ClinicSchedule> existingSchedules = clinicScheduleRepository.findByClinicId(clinicId)
+                .stream()
+                .filter(s -> s.getDayOfWeek() == dayOfWeek)
+                .filter(s -> excludeScheduleId == null || !s.getId().equals(excludeScheduleId))
+                .collect(Collectors.toList());
+        
+        // Check for overlaps with each existing schedule
+        for (ClinicSchedule existingSchedule : existingSchedules) {
+            boolean overlaps = !(closeTime.isBefore(existingSchedule.getOpenTime()) || 
+                    openTime.isAfter(existingSchedule.getCloseTime()));
+            
+            if (overlaps) {
+                throw new IllegalStateException(
+                        "Schedule overlaps with existing schedule on " + dayOfWeek + 
+                        " (" + existingSchedule.getOpenTime() + " - " + existingSchedule.getCloseTime() + ")");
+            }
+        }
+    }
+    
+    private void validateNoOverlappingSchedulesWithOtherClinics(Long doctorId, Long currentClinicId, 
+            DayOfWeek dayOfWeek, LocalTime openTime, LocalTime closeTime) {
+        // Get current clinic to check consultation mode
+        Clinic currentClinic = clinicRepository.findById(currentClinicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Clinic not found with id: " + currentClinicId));
+
+        // For online clinics, we allow overlaps as doctors can handle multiple online consultations
+        if (currentClinic.getConsultationMode() == Clinic.ConsultationMode.ONLINE) {
+            return;
+        }
+
+        // Get all clinics for this doctor except the current one
+        List<Clinic> otherClinics = clinicRepository.findByDoctorId(doctorId)
+                .stream()
+                .filter(c -> !c.getId().equals(currentClinicId))
+                .collect(Collectors.toList());
+        
+        // For each clinic, check its schedules for the given day
+        for (Clinic clinic : otherClinics) {
+            // Skip overlap check with online clinics
+            if (clinic.getConsultationMode() == Clinic.ConsultationMode.ONLINE) {
+                continue;
+            }
+
+            List<ClinicSchedule> schedules = clinicScheduleRepository.findByClinicId(clinic.getId())
+                    .stream()
+                    .filter(s -> s.getDayOfWeek() == dayOfWeek)
+                    .collect(Collectors.toList());
+            
+            for (ClinicSchedule schedule : schedules) {
+                boolean overlaps = !(closeTime.isBefore(schedule.getOpenTime()) || 
+                        openTime.isAfter(schedule.getCloseTime()));
+                
+                if (overlaps) {
+                    throw new IllegalStateException(
+                            "Schedule overlaps with existing schedule at clinic '" + 
+                            clinic.getClinicName() + "' on " + dayOfWeek + 
+                            " (" + schedule.getOpenTime() + " - " + schedule.getCloseTime() + ")");
+                }
+            }
+        }
+    }
+    
     private ClinicScheduleResponse mapToResponse(ClinicSchedule schedule) {
         return ClinicScheduleResponse.builder()
                 .id(schedule.getId())
@@ -164,10 +237,13 @@ public class ClinicScheduleService {
                 .dayOfWeek(schedule.getDayOfWeek())
                 .openTime(schedule.getOpenTime())
                 .closeTime(schedule.getCloseTime())
+                .consultationDurationMinutes(schedule.getConsultationDurationMinutes())
+                .maxParallelAppointments(schedule.getMaxParallelAppointments())
                 .isActive(schedule.getIsActive())
                 .clinicAddress(schedule.getClinic().getAddressLine1())
                 .clinicCity(schedule.getClinic().getCity())
                 .clinicProvince(schedule.getClinic().getProvince())
+                .consultationMode(schedule.getClinic().getConsultationMode())
                 .build();
     }
 } 

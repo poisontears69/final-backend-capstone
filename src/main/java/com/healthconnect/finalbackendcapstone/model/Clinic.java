@@ -21,10 +21,14 @@ public class Clinic {
     @JoinColumn(name = "doctor_id", nullable = false)
     private DoctorProfile doctor;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "consultation_mode", nullable = false)
+    private ConsultationMode consultationMode = ConsultationMode.IN_CLINIC;
+
     @Column(name = "clinic_name", nullable = false)
     private String clinicName;
 
-    @Column(name = "address_line1", nullable = false)
+    @Column(name = "address_line1")
     private String addressLine1;
 
     @Column(name = "address_line2")
@@ -76,4 +80,29 @@ public class Clinic {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    public enum ConsultationMode {
+        IN_CLINIC,
+        ONLINE
+    }
+
+    @PrePersist
+    @PreUpdate
+    private void validateClinic() {
+        if (consultationMode == ConsultationMode.IN_CLINIC) {
+            if (addressLine1 == null || addressLine1.trim().isEmpty()) {
+                throw new IllegalStateException("Address is required for in-clinic consultations");
+            }
+        } else {
+            // For online clinics, clear physical location details
+            addressLine1 = null;
+            addressLine2 = null;
+            city = null;
+            province = null;
+            region = null;
+            zipCode = null;
+            landmark = null;
+            landlineNumber = null;
+        }
+    }
 } 

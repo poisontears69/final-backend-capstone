@@ -1,14 +1,15 @@
 package com.healthconnect.finalbackendcapstone.service;
 
-import com.healthconnect.finalbackendcapstone.dto.DoctorSocialLinkDTO;
+import com.healthconnect.finalbackendcapstone.dto.DoctorSocialLinkRequest;
+import com.healthconnect.finalbackendcapstone.dto.DoctorSocialLinkResponse;
 
 import java.util.List;
 
 public interface DoctorSocialLinkService {
-    DoctorSocialLinkDTO createDoctorSocialLink(DoctorSocialLinkDTO doctorSocialLinkDTO);
-    DoctorSocialLinkDTO getDoctorSocialLinkById(Long id);
-    List<DoctorSocialLinkDTO> getDoctorSocialLinksByDoctorId(Long doctorId);
-    DoctorSocialLinkDTO updateDoctorSocialLink(Long id, DoctorSocialLinkDTO doctorSocialLinkDTO);
-    void deleteDoctorSocialLink(Long id);
-    void deleteAllDoctorSocialLinksByDoctorId(Long doctorId);
+    DoctorSocialLinkResponse createSocialLink(DoctorSocialLinkRequest request);
+    DoctorSocialLinkResponse getSocialLinkById(Long id);
+    List<DoctorSocialLinkResponse> getSocialLinksByDoctorId(Long doctorId);
+    DoctorSocialLinkResponse updateSocialLink(Long id, DoctorSocialLinkRequest request);
+    void deleteSocialLink(Long id);
+    void deleteAllSocialLinksForDoctor(Long doctorId);
 } 

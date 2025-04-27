@@ -29,6 +29,30 @@ public class ClinicSchedule {
     @Column(name = "close_time", nullable = false)
     private LocalTime closeTime;
 
+    @Column(name = "consultation_duration_minutes", nullable = false)
+    private Integer consultationDurationMinutes = 30; // Default 30-minute slots
+
+    @Column(name = "max_parallel_appointments")
+    private Integer maxParallelAppointments = 1; // Default 1 for in-clinic, can be more for online
+
     @Column(name = "is_active", columnDefinition = "tinyint(1) default 1")
     private Boolean isActive = true;
+
+    @PrePersist
+    @PreUpdate
+    private void validateSchedule() {
+        // If this is an online clinic schedule, allow parallel appointments
+        if (clinic.getConsultationMode() == Clinic.ConsultationMode.ONLINE) {
+            if (maxParallelAppointments == null || maxParallelAppointments < 1) {
+                maxParallelAppointments = 3; // Default to 3 parallel online appointments
+            }
+        } else {
+            maxParallelAppointments = 1; // Physical clinics can only handle one appointment at a time
+        }
+
+        // Ensure consultation duration is set and valid
+        if (consultationDurationMinutes == null || consultationDurationMinutes < 15) {
+            consultationDurationMinutes = 30; // Default to 30 minutes if not set or too short
+        }
+    }
 } 

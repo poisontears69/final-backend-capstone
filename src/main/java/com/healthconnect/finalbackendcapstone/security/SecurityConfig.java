@@ -38,6 +38,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/doctor/**").hasAnyRole("DOCTOR", "ADMIN")
                         .requestMatchers("/api/patient/**").hasAnyRole("PATIENT", "DOCTOR", "ADMIN")
+                        .requestMatchers("/api/clinics/**").hasAnyRole("DOCTOR", "ADMIN")
+                        .requestMatchers("/api/clinic-schedules/**").hasAnyRole("DOCTOR", "ADMIN")
                         // All other endpoints require authentication
                         .anyRequest().authenticated()
                 )

@@ -65,4 +65,7 @@ public interface ClinicRepository extends JpaRepository<Clinic, Long> {
      * @return count of clinics
      */
     long countByDoctorId(Long doctorId);
+
+    Page<Clinic> findByCityAndConsultationMode(String city, Clinic.ConsultationMode consultationMode, Pageable pageable);
+    Optional<Clinic> findByDoctorIdAndConsultationMode(Long doctorId, Clinic.ConsultationMode consultationMode);
 } 

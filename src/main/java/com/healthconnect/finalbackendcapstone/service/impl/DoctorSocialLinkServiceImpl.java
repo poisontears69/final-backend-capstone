@@ -1,13 +1,13 @@
 package com.healthconnect.finalbackendcapstone.service.impl;
 
-import com.healthconnect.finalbackendcapstone.dto.DoctorSocialLinkDTO;
+import com.healthconnect.finalbackendcapstone.dto.DoctorSocialLinkRequest;
+import com.healthconnect.finalbackendcapstone.dto.DoctorSocialLinkResponse;
 import com.healthconnect.finalbackendcapstone.exception.ResourceNotFoundException;
-import com.healthconnect.finalbackendcapstone.model.DoctorProfile;
 import com.healthconnect.finalbackendcapstone.model.DoctorSocialLink;
-import com.healthconnect.finalbackendcapstone.repository.DoctorProfileRepository;
 import com.healthconnect.finalbackendcapstone.repository.DoctorSocialLinkRepository;
+import com.healthconnect.finalbackendcapstone.repository.DoctorProfileRepository;
 import com.healthconnect.finalbackendcapstone.service.DoctorSocialLinkService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,103 +15,91 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class DoctorSocialLinkServiceImpl implements DoctorSocialLinkService {
-
     private final DoctorSocialLinkRepository doctorSocialLinkRepository;
     private final DoctorProfileRepository doctorProfileRepository;
 
-    @Autowired
-    public DoctorSocialLinkServiceImpl(DoctorSocialLinkRepository doctorSocialLinkRepository,
-                                       DoctorProfileRepository doctorProfileRepository) {
-        this.doctorSocialLinkRepository = doctorSocialLinkRepository;
-        this.doctorProfileRepository = doctorProfileRepository;
-    }
-
-    @Override
-    public DoctorSocialLinkDTO createDoctorSocialLink(DoctorSocialLinkDTO doctorSocialLinkDTO) {
-        DoctorSocialLink doctorSocialLink = mapToEntity(doctorSocialLinkDTO);
-        DoctorSocialLink savedDoctorSocialLink = doctorSocialLinkRepository.save(doctorSocialLink);
-        return mapToDTO(savedDoctorSocialLink);
-    }
-
-    @Override
-    public DoctorSocialLinkDTO getDoctorSocialLinkById(Long id) {
-        DoctorSocialLink doctorSocialLink = doctorSocialLinkRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("DoctorSocialLink", "id", id));
-        return mapToDTO(doctorSocialLink);
-    }
-
-    @Override
-    public List<DoctorSocialLinkDTO> getDoctorSocialLinksByDoctorId(Long doctorId) {
-        List<DoctorSocialLink> doctorSocialLinks = doctorSocialLinkRepository.findByDoctorId(doctorId);
-        return doctorSocialLinks.stream()
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public DoctorSocialLinkDTO updateDoctorSocialLink(Long id, DoctorSocialLinkDTO doctorSocialLinkDTO) {
-        DoctorSocialLink doctorSocialLink = doctorSocialLinkRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("DoctorSocialLink", "id", id));
-        
-        doctorSocialLink.setUrl(doctorSocialLinkDTO.getUrl());
-        
-        // Only update doctor reference if provided
-        if (doctorSocialLinkDTO.getDoctorId() != null) {
-            DoctorProfile doctorProfile = doctorProfileRepository.findById(doctorSocialLinkDTO.getDoctorId())
-                    .orElseThrow(() -> new ResourceNotFoundException("DoctorProfile", "id", doctorSocialLinkDTO.getDoctorId()));
-            doctorSocialLink.setDoctor(doctorProfile);
-        }
-        
-        DoctorSocialLink updatedDoctorSocialLink = doctorSocialLinkRepository.save(doctorSocialLink);
-        return mapToDTO(updatedDoctorSocialLink);
-    }
-
-    @Override
-    public void deleteDoctorSocialLink(Long id) {
-        DoctorSocialLink doctorSocialLink = doctorSocialLinkRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("DoctorSocialLink", "id", id));
-        doctorSocialLinkRepository.delete(doctorSocialLink);
-    }
-
     @Override
     @Transactional
-    public void deleteAllDoctorSocialLinksByDoctorId(Long doctorId) {
-        // Check if doctor exists
+    public DoctorSocialLinkResponse createSocialLink(DoctorSocialLinkRequest request) {
+        // Validate doctor exists
+        if (!doctorProfileRepository.existsById(request.getDoctorId())) {
+            throw new ResourceNotFoundException("Doctor not found with id: " + request.getDoctorId());
+        }
+        
+        // Create new social link
+        DoctorSocialLink socialLink = new DoctorSocialLink();
+        socialLink.setDoctorId(request.getDoctorId());
+        socialLink.setUrl(request.getUrl());
+        
+        DoctorSocialLink savedSocialLink = doctorSocialLinkRepository.save(socialLink);
+        return mapToResponse(savedSocialLink);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public DoctorSocialLinkResponse getSocialLinkById(Long id) {
+        DoctorSocialLink socialLink = doctorSocialLinkRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor social link not found with id: " + id));
+        return mapToResponse(socialLink);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public List<DoctorSocialLinkResponse> getSocialLinksByDoctorId(Long doctorId) {
+        // Verify doctor exists
         if (!doctorProfileRepository.existsById(doctorId)) {
-            throw new ResourceNotFoundException("DoctorProfile", "id", doctorId);
+            throw new ResourceNotFoundException("Doctor not found with id: " + doctorId);
+        }
+        
+        List<DoctorSocialLink> socialLinks = doctorSocialLinkRepository.findByDoctorId(doctorId);
+        return socialLinks.stream().map(this::mapToResponse).collect(Collectors.toList());
+    }
+    
+    @Override
+    @Transactional
+    public DoctorSocialLinkResponse updateSocialLink(Long id, DoctorSocialLinkRequest request) {
+        DoctorSocialLink socialLink = doctorSocialLinkRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor social link not found with id: " + id));
+        
+        // Check if doctor is changing and exists
+        if (!socialLink.getDoctorId().equals(request.getDoctorId())) {
+            if (!doctorProfileRepository.existsById(request.getDoctorId())) {
+                throw new ResourceNotFoundException("Doctor not found with id: " + request.getDoctorId());
+            }
+            socialLink.setDoctorId(request.getDoctorId());
+        }
+        
+        socialLink.setUrl(request.getUrl());
+        
+        DoctorSocialLink updatedSocialLink = doctorSocialLinkRepository.save(socialLink);
+        return mapToResponse(updatedSocialLink);
+    }
+    
+    @Override
+    @Transactional
+    public void deleteSocialLink(Long id) {
+        if (!doctorSocialLinkRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Doctor social link not found with id: " + id);
+        }
+        doctorSocialLinkRepository.deleteById(id);
+    }
+    
+    @Override
+    @Transactional
+    public void deleteAllSocialLinksForDoctor(Long doctorId) {
+        if (!doctorProfileRepository.existsById(doctorId)) {
+            throw new ResourceNotFoundException("Doctor not found with id: " + doctorId);
         }
         doctorSocialLinkRepository.deleteByDoctorId(doctorId);
     }
-
-    private DoctorSocialLink mapToEntity(DoctorSocialLinkDTO doctorSocialLinkDTO) {
-        DoctorSocialLink doctorSocialLink = new DoctorSocialLink();
-        
-        if (doctorSocialLinkDTO.getId() != null) {
-            doctorSocialLink.setId(doctorSocialLinkDTO.getId());
-        }
-        
-        doctorSocialLink.setUrl(doctorSocialLinkDTO.getUrl());
-        
-        if (doctorSocialLinkDTO.getDoctorId() != null) {
-            DoctorProfile doctorProfile = doctorProfileRepository.findById(doctorSocialLinkDTO.getDoctorId())
-                    .orElseThrow(() -> new ResourceNotFoundException("DoctorProfile", "id", doctorSocialLinkDTO.getDoctorId()));
-            doctorSocialLink.setDoctor(doctorProfile);
-        }
-        
-        return doctorSocialLink;
-    }
-
-    private DoctorSocialLinkDTO mapToDTO(DoctorSocialLink doctorSocialLink) {
-        DoctorSocialLinkDTO doctorSocialLinkDTO = new DoctorSocialLinkDTO();
-        
-        doctorSocialLinkDTO.setId(doctorSocialLink.getId());
-        doctorSocialLinkDTO.setUrl(doctorSocialLink.getUrl());
-        
-        if (doctorSocialLink.getDoctor() != null) {
-            doctorSocialLinkDTO.setDoctorId(doctorSocialLink.getDoctor().getId());
-        }
-        
-        return doctorSocialLinkDTO;
+    
+    private DoctorSocialLinkResponse mapToResponse(DoctorSocialLink socialLink) {
+        return DoctorSocialLinkResponse.builder()
+                .id(socialLink.getId())
+                .doctorId(socialLink.getDoctorId())
+                .url(socialLink.getUrl())
+                .build();
     }
 } 
