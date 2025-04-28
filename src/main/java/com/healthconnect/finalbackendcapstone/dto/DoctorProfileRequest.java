@@ -35,7 +35,8 @@ public class DoctorProfileRequest {
     @Email(message = "Invalid email format")
     private String email;
     
-    @Pattern(regexp = "^[+]?[0-9]{10,15}$", message = "Invalid phone number format")
+    @Pattern(regexp = "^(09|\\+639)\\d{9}$", 
+            message = "Phone number must be a valid Philippine mobile number (e.g., 09123456789 or +639123456789)")
     private String phoneNumber;
     
     @NotBlank(message = "PRC number is required")

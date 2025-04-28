@@ -8,6 +8,7 @@ import com.healthconnect.finalbackendcapstone.model.DoctorProfile;
 import com.healthconnect.finalbackendcapstone.model.User;
 import com.healthconnect.finalbackendcapstone.repository.DoctorProfileRepository;
 import com.healthconnect.finalbackendcapstone.repository.UserRepository;
+import com.healthconnect.finalbackendcapstone.util.PhoneNumberUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +24,7 @@ public class DoctorProfileService {
 
     private final DoctorProfileRepository doctorProfileRepository;
     private final UserRepository userRepository;
+    private final PhoneNumberUtil phoneNumberUtil;
 
     /**
      * Create a new doctor profile
@@ -49,6 +51,15 @@ public class DoctorProfileService {
         // Check if PRC number is already registered
         if (doctorProfileRepository.existsByPrcNumber(request.getPrcNumber())) {
             throw new DuplicateResourceException("PRC number already registered");
+        }
+        
+        // Validate phone number if provided
+        if (request.getPhoneNumber() != null) {
+            String formattedPhoneNumber = phoneNumberUtil.formatToPhilippineNumber(request.getPhoneNumber());
+            if (formattedPhoneNumber == null) {
+                throw new IllegalArgumentException("Invalid phone number format");
+            }
+            request.setPhoneNumber(formattedPhoneNumber);
         }
         
         // Create doctor profile
@@ -79,6 +90,15 @@ public class DoctorProfileService {
         if (!doctorProfile.getPrcNumber().equals(request.getPrcNumber()) && 
             doctorProfileRepository.existsByPrcNumber(request.getPrcNumber())) {
             throw new DuplicateResourceException("PRC number already registered");
+        }
+        
+        // Validate phone number if provided
+        if (request.getPhoneNumber() != null) {
+            String formattedPhoneNumber = phoneNumberUtil.formatToPhilippineNumber(request.getPhoneNumber());
+            if (formattedPhoneNumber == null) {
+                throw new IllegalArgumentException("Invalid phone number format");
+            }
+            request.setPhoneNumber(formattedPhoneNumber);
         }
         
         // Update doctor profile
@@ -219,6 +239,12 @@ public class DoctorProfileService {
             yearsOfExperience = LocalDate.now().getYear() - doctorProfile.getPracticingSince();
         }
         
+        // Format phone number to local format for response
+        String localPhoneNumber = null;
+        if (doctorProfile.getPhoneNumber() != null) {
+            localPhoneNumber = phoneNumberUtil.formatToLocalPhilippineNumber(doctorProfile.getPhoneNumber());
+        }
+        
         return DoctorProfileResponse.builder()
                 .id(doctorProfile.getId())
                 .userId(doctorProfile.getUser().getId())
@@ -232,7 +258,7 @@ public class DoctorProfileService {
                 .title(doctorProfile.getTitle())
                 .description(doctorProfile.getDescription())
                 .email(doctorProfile.getEmail())
-                .phoneNumber(doctorProfile.getPhoneNumber())
+                .phoneNumber(localPhoneNumber)
                 .prcNumber(doctorProfile.getPrcNumber())
                 .s2Number(doctorProfile.getS2Number())
                 .ptrNumber(doctorProfile.getPtrNumber())

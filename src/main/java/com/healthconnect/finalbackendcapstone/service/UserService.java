@@ -4,13 +4,14 @@ import com.healthconnect.finalbackendcapstone.dto.LoginRequest;
 import com.healthconnect.finalbackendcapstone.dto.LoginResponse;
 import com.healthconnect.finalbackendcapstone.dto.SignupRequest;
 import com.healthconnect.finalbackendcapstone.dto.SignupResponse;
+import com.healthconnect.finalbackendcapstone.exception.BadCredentialsException;
 import com.healthconnect.finalbackendcapstone.exception.DuplicateResourceException;
 import com.healthconnect.finalbackendcapstone.model.User;
 import com.healthconnect.finalbackendcapstone.repository.UserRepository;
 import com.healthconnect.finalbackendcapstone.security.JwtUtil;
 import com.healthconnect.finalbackendcapstone.util.PasswordUtil;
+import com.healthconnect.finalbackendcapstone.util.PhoneNumberUtil;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,12 +23,14 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordUtil passwordUtil;
     private final JwtUtil jwtUtil;
+    private final PhoneNumberUtil phoneNumberUtil;
 
     /**
      * Register a new user
      * @param signupRequest the signup request containing user details
      * @return a response containing the created user details
      * @throws DuplicateResourceException if email or phone number already exists
+     * @throws IllegalArgumentException if phone number format is invalid
      */
     @Transactional
     public SignupResponse registerUser(SignupRequest signupRequest) {
@@ -36,15 +39,21 @@ public class UserService {
             throw new DuplicateResourceException("Email already in use");
         }
 
+        // Format and validate phone number
+        String formattedPhoneNumber = phoneNumberUtil.formatToPhilippineNumber(signupRequest.getPhoneNumber());
+        if (formattedPhoneNumber == null) {
+            throw new IllegalArgumentException("Invalid phone number format");
+        }
+
         // Check if phone number already exists
-        if (userRepository.existsByPhoneNumber(signupRequest.getPhoneNumber())) {
+        if (userRepository.existsByPhoneNumber(formattedPhoneNumber)) {
             throw new DuplicateResourceException("Phone number already in use");
         }
 
         // Create new user
         User user = new User();
         user.setEmail(signupRequest.getEmail());
-        user.setPhoneNumber(signupRequest.getPhoneNumber());
+        user.setPhoneNumber(formattedPhoneNumber);
         user.setPasswordHash(passwordUtil.encodePassword(signupRequest.getPassword()));
 
         // Set role (with validation)
@@ -57,11 +66,11 @@ public class UserService {
         // Save user
         User savedUser = userRepository.save(user);
 
-        // Build response
+        // Build response with local phone number format
         return SignupResponse.builder()
                 .id(savedUser.getId())
                 .email(savedUser.getEmail())
-                .phoneNumber(savedUser.getPhoneNumber())
+                .phoneNumber(phoneNumberUtil.formatToLocalPhilippineNumber(savedUser.getPhoneNumber()))
                 .role(savedUser.getRole().name())
                 .isEmailVerified(savedUser.isEmailVerified())
                 .isPhoneVerified(savedUser.isPhoneVerified())
@@ -95,11 +104,11 @@ public class UserService {
         // Generate JWT token
         String token = jwtUtil.generateToken(user);
         
-        // Build response
+        // Build response with local phone number format
         return LoginResponse.builder()
                 .id(user.getId())
                 .email(user.getEmail())
-                .phoneNumber(user.getPhoneNumber())
+                .phoneNumber(phoneNumberUtil.formatToLocalPhilippineNumber(user.getPhoneNumber()))
                 .role(user.getRole().name())
                 .isEmailVerified(user.isEmailVerified())
                 .isPhoneVerified(user.isPhoneVerified())

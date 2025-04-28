@@ -32,14 +32,29 @@ build/
 ### VS Code ###
 .vscode/
 
+### Environment Variables ###
+.env
+.env.local
+.env.*.local
+application-local.yml
+application-local.properties
+
+### Google Cloud Storage ###
+gcp-credentials.json
+**/resources/gcp-credentials.json
+
+### Logs ###
+*.log
+logs/
+log/
+
+### Other ###
+*.swp
+.DS_Store
+
 # Secrets
 firebase-service-account.json
 src/main/resources/application.properties
 
 # Environment files
-.env
-.env.local
-.env.development
-.env.test
-.env.production
 env.properties
